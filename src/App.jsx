@@ -12,8 +12,8 @@ const ROLES = {
     color: "#f59e0b",
     accent: "#fbbf24",
     description: "Full plant overview — all jobs, all assets, financials & QC.",
-    tabs: ["overview", "gantt", "dispatch", "qc", "finance", "uptime", "users"],
-    perms: { create: true, edit: true, delete: true, status: true, finance: true, qc: true, users: true, uptime: true, allAssets: true, allTypes: true },
+    tabs: ["overview", "gantt", "dispatch", "qc", "finance", "users"],
+    perms: { create: true, edit: true, delete: true, status: true, finance: true, qc: true, users: true, allAssets: true, allTypes: true },
   },
   batch_operator: {
     id: "batch_operator",
@@ -32,8 +32,8 @@ const ROLES = {
     color: "#34d399",
     accent: "#6ee7b7",
     description: "Assigns mixer & pump truck dispatch, tracks live deliveries.",
-    tabs: ["gantt", "dispatch", "uptime"],
-    perms: { create: true, edit: true, delete: false, status: true, finance: false, qc: false, users: false, allAssets: false, uptime: true, allTypes: false, assetGroups: ["mt","pt"], jobTypes: ["Truck Dispatch","Concrete Pour","Maintenance"] },
+    tabs: ["gantt", "dispatch"],
+    perms: { create: true, edit: true, delete: false, status: true, finance: false, qc: false, users: false, allAssets: false, allTypes: false, assetGroups: ["mt","pt"], jobTypes: ["Truck Dispatch","Concrete Pour","Maintenance"] },
   },
   qc_lab: {
     id: "qc_lab",
@@ -108,22 +108,6 @@ const SEED = [
 ];
 
 const BLANK = { id:null, assetId:"MT01", type:"Truck Dispatch", start:8, dur:2, status:"Scheduled", priority:"Normal", grade:"C30", volume:7, site:"", operator:"", notes:"" };
-
-/* ─── DOWNTIME REASONS ───────────────────────────────────────────────────── */
-const DOWNTIME_REASONS = ["Scheduled Maintenance","Breakdown / Fault","Waiting for Parts","Operator Unavailable","Fuel / Refilling","Inspection","Weather Hold","Other"];
-const UT_SEED = [
-  { id:"ut1",  assetId:"BP1",  date:"2025-05-19", uptimeH:10.5, downtimeH:1.5, reason:"Scheduled Maintenance", notes:"Monthly PM — conveyor belt check", loggedBy:"u2" },
-  { id:"ut2",  assetId:"BP2",  date:"2025-05-19", uptimeH:9.0,  downtimeH:3.0, reason:"Breakdown / Fault",     notes:"Mixer motor overheated, replaced thermostat", loggedBy:"u3" },
-  { id:"ut3",  assetId:"MT01", date:"2025-05-19", uptimeH:11.0, downtimeH:1.0, reason:"Fuel / Refilling",      notes:"", loggedBy:"u4" },
-  { id:"ut4",  assetId:"MT02", date:"2025-05-19", uptimeH:8.0,  downtimeH:4.0, reason:"Waiting for Parts",     notes:"Drum seal replacement pending delivery", loggedBy:"u4" },
-  { id:"ut5",  assetId:"MT03", date:"2025-05-19", uptimeH:12.0, downtimeH:0.0, reason:"",                      notes:"", loggedBy:"u4" },
-  { id:"ut6",  assetId:"MT04", date:"2025-05-19", uptimeH:10.0, downtimeH:2.0, reason:"Operator Unavailable",  notes:"Driver reported sick, replacement arranged", loggedBy:"u4" },
-  { id:"ut7",  assetId:"PT01", date:"2025-05-19", uptimeH:9.5,  downtimeH:2.5, reason:"Inspection",            notes:"Boom pump hydraulic inspection", loggedBy:"u1" },
-  { id:"ut8",  assetId:"PT02", date:"2025-05-19", uptimeH:12.0, downtimeH:0.0, reason:"",                      notes:"", loggedBy:"u1" },
-  { id:"ut9",  assetId:"CB1",  date:"2025-05-19", uptimeH:11.5, downtimeH:0.5, reason:"Scheduled Maintenance", notes:"Belt tension adjustment", loggedBy:"u2" },
-  { id:"ut10", assetId:"CB2",  date:"2025-05-19", uptimeH:7.0,  downtimeH:5.0, reason:"Breakdown / Fault",     notes:"Idler roller seized — replaced", loggedBy:"u2" },
-];
-const BLANK_UT = { id:null, assetId:"BP1", date:"", uptimeH:8, downtimeH:0, reason:"Scheduled Maintenance", notes:"", loggedBy:"" };
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ROOT
@@ -257,9 +241,6 @@ function Scheduler({ user, onLogout }) {
   const perms = role.perms;
 
   const [jobs, setJobs]     = useState(SEED);
-  const [utLogs, setUtLogs] = useState(UT_SEED);
-  const [utModal, setUtModal] = useState(false);
-  const [utForm, setUtForm]   = useState(BLANK_UT);
   const [sel, setSel]       = useState(null);
   const [modal, setModal]   = useState(false);
   const [form, setForm]     = useState(BLANK);
@@ -318,7 +299,7 @@ function Scheduler({ user, onLogout }) {
   /* stats */
   const statVol = roleJobs.filter(j => j.status !== "Cancelled").reduce((s,j) => s+j.volume, 0);
 
-  const TAB_LABELS = { overview:"📊 Overview", gantt:"⬛ Timeline", dispatch:"☰ Dispatch", qc:"🔬 QC Data", finance:"💰 Finance", uptime:"⏱ Uptime", users:"👥 Users" };
+  const TAB_LABELS = { overview:"📊 Overview", gantt:"⬛ Timeline", dispatch:"☰ Dispatch", qc:"🔬 QC Data", finance:"💰 Finance", users:"👥 Users" };
 
   if (userPane) return (
     <>
@@ -666,18 +647,6 @@ function Scheduler({ user, onLogout }) {
               </div>
             )}
 
-
-            {/* UPTIME / DOWNTIME */}
-            {tab === "uptime" && (
-              <UptimeTab
-                utLogs={utLogs} setUtLogs={setUtLogs}
-                utModal={utModal} setUtModal={setUtModal}
-                utForm={utForm}  setUtForm={setUtForm}
-                perms={perms} user={user} role={role}
-                visGroups={visGroups}
-              />
-            )}
-
           </main>
 
           {/* ── SIDE DETAIL ── */}
@@ -846,229 +815,6 @@ function Scheduler({ user, onLogout }) {
   );
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   UPTIME / DOWNTIME TAB
-═══════════════════════════════════════════════════════════════════════════ */
-function UptimeTab({ utLogs, setUtLogs, utModal, setUtModal, utForm, setUtForm, perms, user, role, visGroups }) {
-  const [filterAsset, setFilterAsset] = useState("All");
-  const [selLog, setSelLog] = useState(null);
-
-  const SHIFT_H = 12; // reference shift hours for OEE %
-
-  const allAssets = visGroups.flatMap(g => g.assets);
-  const filteredLogs = filterAsset === "All"
-    ? utLogs
-    : utLogs.filter(l => l.assetId === filterAsset);
-
-  function openNew() {
-    setUtForm({ ...BLANK_UT, id: "ut" + Date.now(), date: new Date().toISOString().slice(0,10), loggedBy: user.id });
-    setUtModal(true);
-  }
-  function openEdit(l) { setUtForm({ ...l }); setUtModal(true); }
-  function saveLog() {
-    setUtLogs(p => { const e = p.find(l => l.id === utForm.id); return e ? p.map(l => l.id === utForm.id ? utForm : l) : [...p, utForm]; });
-    setUtModal(false);
-  }
-  function delLog(id) { setUtLogs(p => p.filter(l => l.id !== id)); setSelLog(null); setUtModal(false); }
-
-  // Per-asset summary
-  const assetSummary = allAssets.map(a => {
-    const logs = utLogs.filter(l => l.assetId === a.id);
-    const totalUp   = logs.reduce((s,l) => s + l.uptimeH, 0);
-    const totalDown = logs.reduce((s,l) => s + l.downtimeH, 0);
-    const total     = totalUp + totalDown;
-    const pct       = total > 0 ? Math.round((totalUp / total) * 100) : 0;
-    const lastLog   = logs.sort((a,b) => b.date.localeCompare(a.date))[0];
-    return { ...a, totalUp, totalDown, total, pct, lastLog, logCount: logs.length };
-  });
-
-  // Plant-wide totals
-  const plantUp   = assetSummary.reduce((s,a) => s + a.totalUp, 0);
-  const plantDown = assetSummary.reduce((s,a) => s + a.totalDown, 0);
-  const plantPct  = plantUp + plantDown > 0 ? Math.round((plantUp / (plantUp + plantDown)) * 100) : 0;
-
-  const uptimeColor = pct => pct >= 85 ? "#4ade80" : pct >= 65 ? "#f59e0b" : "#f87171";
-
-  return (
-    <div className="ut-wrap">
-      {/* ── HEADER BAR ── */}
-      <div className="ut-topbar">
-        <div className="ut-topbar-left">
-          <span className="section-hdr" style={{border:"none",background:"transparent",padding:"0",display:"inline"}}>⏱ Equipment Uptime &amp; Downtime Log</span>
-          <div className="ut-plant-kpis">
-            <div className="ut-kpi"><span className="ut-kpi-v" style={{color:"#4ade80"}}>{plantUp.toFixed(1)}h</span><span className="ut-kpi-l">Total Uptime</span></div>
-            <div className="ut-kpi"><span className="ut-kpi-v" style={{color:"#f87171"}}>{plantDown.toFixed(1)}h</span><span className="ut-kpi-l">Total Downtime</span></div>
-            <div className="ut-kpi"><span className="ut-kpi-v" style={{color: uptimeColor(plantPct)}}>{plantPct}%</span><span className="ut-kpi-l">Plant Availability</span></div>
-          </div>
-        </div>
-        <div className="ut-topbar-right">
-          <select className="ut-select" value={filterAsset} onChange={e => setFilterAsset(e.target.value)}>
-            <option value="All">All Assets</option>
-            {visGroups.map(g => (
-              <optgroup key={g.id} label={g.label}>
-                {g.assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </optgroup>
-            ))}
-          </select>
-          {perms.uptime && <button className="btn-primary" style={{"--rc": role.color}} onClick={openNew}>+ Log Entry</button>}
-        </div>
-      </div>
-
-      <div className="ut-body">
-        {/* ── ASSET CARDS ── */}
-        <div className="ut-cards-col">
-          <div className="ut-col-hdr">Asset Availability</div>
-          {assetSummary.map(a => {
-            const uc = uptimeColor(a.pct);
-            const isFiltered = filterAsset !== "All" && filterAsset !== a.id;
-            return (
-              <div key={a.id} className={`ut-asset-card${isFiltered ? " ut-dimmed" : ""}`}
-                style={{ borderColor: a.color + "44" }}
-                onClick={() => setFilterAsset(filterAsset === a.id ? "All" : a.id)}>
-                <div className="utac-top">
-                  <span className="dot" style={{ background: a.color }} />
-                  <span className="utac-name">{a.name}</span>
-                  <span className="utac-pct" style={{ color: uc }}>{a.pct}%</span>
-                </div>
-                {/* Bar */}
-                <div className="utac-bar-track">
-                  <div className="utac-bar-up"   style={{ width: `${a.pct}%`,          background: uc }} />
-                  <div className="utac-bar-down" style={{ width: `${100 - a.pct}%`,    background: "#f8717133" }} />
-                </div>
-                <div className="utac-meta">
-                  <span style={{color:"#4ade80"}}>▲ {a.totalUp.toFixed(1)}h up</span>
-                  <span style={{color:"#f87171"}}>▼ {a.totalDown.toFixed(1)}h down</span>
-                  <span style={{color:"#8b949e"}}>{a.logCount} log{a.logCount!==1?"s":""}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* ── LOG TABLE ── */}
-        <div className="ut-table-col">
-          <div className="ut-col-hdr">Log Entries {filterAsset !== "All" && `— ${getAsset(filterAsset)?.name}`}</div>
-          <div className="ut-table-scroll">
-            <table className="tbl">
-              <thead><tr>
-                <th>Asset</th><th>Date</th><th>Uptime</th><th>Downtime</th>
-                <th>Availability</th><th>Reason</th><th>Logged By</th><th>Notes</th>
-                {perms.uptime && <th />}
-              </tr></thead>
-              <tbody>
-                {filteredLogs.sort((a,b) => b.date.localeCompare(a.date)).map(log => {
-                  const a   = getAsset(log.assetId);
-                  const tot = log.uptimeH + log.downtimeH;
-                  const pct = tot > 0 ? Math.round((log.uptimeH/tot)*100) : 0;
-                  const uc  = uptimeColor(pct);
-                  const op  = USERS.find(u => u.id === log.loggedBy);
-                  return (
-                    <tr key={log.id} className={selLog===log.id?"tr-sel":""} onClick={() => setSelLog(selLog===log.id?null:log.id)}>
-                      <td><span className="dot" style={{background:a?.color}}/><span style={{marginLeft:5}}>{a?.name}</span></td>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:11}}>{log.date}</td>
-                      <td><span style={{color:"#4ade80",fontWeight:600}}>{log.uptimeH}h</span></td>
-                      <td>
-                        {log.downtimeH > 0
-                          ? <span style={{color:"#f87171",fontWeight:600}}>{log.downtimeH}h</span>
-                          : <span style={{color:"#8b949e"}}>—</span>}
-                      </td>
-                      <td>
-                        <div className="ut-inline-bar">
-                          <div style={{width:`${pct}%`,height:"100%",background:uc,borderRadius:2}}/>
-                        </div>
-                        <span style={{color:uc,fontSize:11,fontWeight:700,marginLeft:5}}>{pct}%</span>
-                      </td>
-                      <td style={{fontSize:11,color: log.downtimeH>0?"#f59e0b":"#8b949e"}}>
-                        {log.reason || (log.downtimeH===0 ? "No downtime" : "—")}
-                      </td>
-                      <td style={{fontSize:11}}>{op?.name || "—"}</td>
-                      <td className="td-trunc" style={{fontSize:11,color:"#8b949e"}}>{log.notes||"—"}</td>
-                      {perms.uptime && (
-                        <td><button className="row-btn" onClick={e=>{e.stopPropagation();openEdit(log);}}>✎</button></td>
-                      )}
-                    </tr>
-                  );
-                })}
-                {filteredLogs.length === 0 && (
-                  <tr><td colSpan={9} className="tbl-empty">No log entries for this asset yet.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* ── LOG MODAL ── */}
-      {utModal && (
-        <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setUtModal(false)}>
-          <div className="modal-box" style={{width:480}}>
-            <div className="modal-hdr">
-              <span>{utLogs.find(l=>l.id===utForm.id) ? "Edit Log Entry" : "New Uptime Log"}</span>
-              <button className="modal-close" onClick={()=>setUtModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-2col">
-                <MFld label="Asset">
-                  <select value={utForm.assetId} onChange={e=>setUtForm(p=>({...p,assetId:e.target.value}))}>
-                    {visGroups.map(g=>(
-                      <optgroup key={g.id} label={g.label}>
-                        {g.assets.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
-                      </optgroup>
-                    ))}
-                  </select>
-                </MFld>
-                <MFld label="Date">
-                  <input type="date" value={utForm.date} onChange={e=>setUtForm(p=>({...p,date:e.target.value}))}/>
-                </MFld>
-              </div>
-              <div className="form-2col">
-                <MFld label={`Uptime Hours: ${utForm.uptimeH}h`}>
-                  <input type="range" min={0} max={24} step={0.5} value={utForm.uptimeH}
-                    onChange={e=>setUtForm(p=>({...p,uptimeH:+e.target.value,downtimeH:Math.max(0,24-+e.target.value)}))}/>
-                  <div className="ut-slider-labels"><span style={{color:"#4ade80"}}>{utForm.uptimeH}h UP</span><span style={{color:"#f87171"}}>{utForm.downtimeH}h DOWN</span></div>
-                </MFld>
-                <MFld label={`Downtime Hours: ${utForm.downtimeH}h`}>
-                  <input type="range" min={0} max={24} step={0.5} value={utForm.downtimeH}
-                    onChange={e=>setUtForm(p=>({...p,downtimeH:+e.target.value,uptimeH:Math.max(0,24-+e.target.value)}))}/>
-                </MFld>
-              </div>
-              {/* Visual preview bar */}
-              <div className="ut-preview-bar">
-                <div style={{flex:utForm.uptimeH,background:"#4ade80",borderRadius:"4px 0 0 4px",minWidth:2}}/>
-                <div style={{flex:utForm.downtimeH,background:"#f8717144",borderRadius:"0 4px 4px 0",minWidth:utForm.downtimeH>0?2:0}}/>
-              </div>
-              <div className="ut-preview-labels">
-                <span style={{color:"#4ade80"}}>▲ {utForm.uptimeH}h Uptime</span>
-                <span style={{color:"#f87171"}}>▼ {utForm.downtimeH}h Downtime</span>
-                <span style={{color:"#8b949e"}}>{utForm.uptimeH+utForm.downtimeH > 0 ? Math.round((utForm.uptimeH/(utForm.uptimeH+utForm.downtimeH))*100) : 0}% availability</span>
-              </div>
-              <MFld label="Downtime Reason">
-                <select value={utForm.reason} onChange={e=>setUtForm(p=>({...p,reason:e.target.value}))}>
-                  <option value="">— No downtime / N/A —</option>
-                  {DOWNTIME_REASONS.map(r=><option key={r}>{r}</option>)}
-                </select>
-              </MFld>
-              <MFld label="Notes / Details">
-                <textarea value={utForm.notes} onChange={e=>setUtForm(p=>({...p,notes:e.target.value}))} placeholder="Describe the issue, repair done, parts replaced…"/>
-              </MFld>
-            </div>
-            <div className="modal-ftr">
-              {utLogs.find(l=>l.id===utForm.id) && perms.uptime
-                ? <button className="btn-danger" onClick={()=>delLog(utForm.id)}>Delete Log</button>
-                : <div/>}
-              <div style={{display:"flex",gap:8}}>
-                <button className="btn-ghost" onClick={()=>setUtModal(false)}>Cancel</button>
-                <button className="btn-primary" style={{"--rc":role.color}} onClick={saveLog}>Save Log</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════
    USERS PANEL  (Plant Manager only)
 ═══════════════════════════════════════════════════════════════════════════ */
@@ -1183,37 +929,6 @@ const BASE = `
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: #161b22; }
   ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
-
-  /* UPTIME TAB */
-  .ut-wrap { display:flex; flex-direction:column; flex:1; overflow:hidden; }
-  .ut-topbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#161b22; border-bottom:1px solid #21262d; gap:12px; flex-wrap:wrap; }
-  .ut-topbar-left { display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
-  .ut-topbar-right { display:flex; align-items:center; gap:8px; }
-  .ut-plant-kpis { display:flex; gap:16px; }
-  .ut-kpi { display:flex; flex-direction:column; align-items:center; }
-  .ut-kpi-v { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; line-height:1; }
-  .ut-kpi-l { font-size:10px; color:#8b949e; text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
-  .ut-select { background:#0d1117; border:1px solid #30363d; border-radius:5px; padding:6px 10px; color:#c9d1d9; font-family:'DM Sans',sans-serif; font-size:12px; outline:none; cursor:pointer; }
-  .ut-body { display:grid; grid-template-columns:220px 1fr; flex:1; overflow:hidden; }
-  .ut-cards-col { overflow-y:auto; border-right:1px solid #21262d; background:#0d1117; }
-  .ut-table-col { overflow:hidden; display:flex; flex-direction:column; }
-  .ut-table-scroll { overflow:auto; flex:1; }
-  .ut-col-hdr { padding:8px 12px; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:#8b949e; text-transform:uppercase; border-bottom:1px solid #21262d; background:#161b22; }
-  .ut-asset-card { padding:10px 12px; border-bottom:1px solid #21262d; border-left:3px solid transparent; cursor:pointer; transition:all .15s; background:#0d1117; }
-  .ut-asset-card:hover { background:#161b22; }
-  .ut-asset-card.ut-dimmed { opacity:.4; }
-  .utac-top { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
-  .utac-name { font-size:12px; color:#f0f6fc; font-weight:600; flex:1; }
-  .utac-pct { font-family:'Syne',sans-serif; font-size:14px; font-weight:800; }
-  .utac-bar-track { display:flex; height:5px; border-radius:3px; overflow:hidden; background:#21262d; margin-bottom:5px; }
-  .utac-bar-up { transition:width .4s ease; }
-  .utac-bar-down { }
-  .utac-meta { display:flex; gap:8px; font-size:10px; flex-wrap:wrap; }
-  .ut-inline-bar { display:inline-block; width:50px; height:6px; background:#21262d; border-radius:3px; overflow:hidden; vertical-align:middle; }
-  .ut-slider-labels { display:flex; justify-content:space-between; font-size:10px; margin-top:3px; }
-  .ut-preview-bar { display:flex; height:10px; border-radius:4px; overflow:hidden; margin:6px 0 3px; background:#21262d; }
-  .ut-preview-labels { display:flex; gap:14px; font-size:11px; margin-bottom:4px; font-weight:600; }
-
   @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
   @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
 `;
