@@ -5,5 +5,5 @@ import react from '@vitejs/plugin-react'
 // e.g. if your repo URL is github.com/yourname/my-plant-app  →  base: "/my-plant-app/"
 export default defineConfig({
   plugins: [react()],
-  base: '/rmc-plant-scheduler/',
+  base: '/CSI-Plant-Scheduler/',
 })
